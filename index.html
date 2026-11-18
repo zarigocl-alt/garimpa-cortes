@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GARIMPA CORTES</title>
+<style>
+:root{--bg:#000;--card:#0d0f0d;--bd:#1c2a1f;--tx:#e8f5ea;--mu:#7f9a85;--g:#22ff6a;--y:#ffd93b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,sans-serif}
+.w{max-width:1000px;margin:0 auto;padding:16px}h1{font-size:26px;margin:4px 0}h1 b{color:var(--g)}
+.sub{color:var(--mu);margin:0 0 16px}
+button,select,input{font:inherit;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:10px 14px}
+.btn{background:var(--g);color:#000;font-weight:700;border:0;cursor:pointer}.s{padding:6px 10px;font-size:13px;cursor:pointer}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px}
+label{display:block;font-weight:700;margin-bottom:8px;color:var(--g)}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>input{flex:1;min-width:160px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.th{aspect-ratio:9/12;background:#0a140c center/cover;position:relative}
+.sc{position:absolute;top:8px;right:8px;background:#000c;border:1px solid var(--g);color:var(--g);border-radius:20px;padding:2px 10px;font-weight:700}
+.cb{padding:12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.m{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;color:var(--mu);font-size:13px}.m b{color:var(--tx)}
+.bar{height:6px;background:#14221a;border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--g)}
+.st{font-size:12px;color:var(--mu)}.tag{color:var(--g);font-size:13px}.hide{display:none}.err{color:#ff7b7b}
+nav{display:flex;gap:8px;margin-bottom:14px}nav button.on{border-color:var(--g);color:var(--g)}
+a.s{text-decoration:none;color:var(--tx);border:1px solid var(--bd);border-radius:10px;background:var(--card)}
+</style></head><body><div class="w">
+<h1>GARIMPA <b>CORTES</b></h1><p class="sub">Garimpagem de Shorts por hashtag, direto da API oficial do YouTube.</p>
+<nav><button id="t1" class="on">GARIMPAR</button><button id="t2">MEUS CORTES ENCONTRADOS</button></nav>
+<section id="p1">
+<div class="box"><label for="h">QUAL HASHTAG VOCÊ DESEJA GARIMPAR?</label>
+<div class="row"><input id="h" placeholder="#podcast"><button class="btn" id="go">INICIAR GARIMPAGEM</button></div>
+<p class="st">YouTube Shorts: busca automática. TikTok e Instagram: indisponível (essas redes não liberam busca pública por hashtag).</p></div>
+<div class="row" style="margin-bottom:12px"><select id="so"><option value="score">Maior potencial viral</option><option value="views">Mais visualizações</option><option value="eng">Maior engajamento</option><option value="new">Mais recentes</option><option value="old">Mais antigos</option></select>
+<select id="mode"><option value="viewCount">Buscar: mais vistos</option><option value="date">Buscar: mais recentes</option></select></div>
+<div id="sum" class="st" style="margin-bottom:10px"></div><div class="grid" id="res"></div></section>
+<section id="p2" class="hide"><div class="row" style="margin-bottom:12px"><select id="f2m"><option value="fav">Favoritos</option><option value="all">Todos salvos</option></select><select id="f2h"><option value="">Todas as hashtags</option></select></div><div class="grid" id="res2"></div></section>
+</div>
+<script>
+const $=id=>document.getElementById(id);let DB=[],FAV={},cur='',LIST=[];
+const K='gc_srv1';
+try{const s=JSON.parse(localStorage.getItem(K)||'{}');DB=s.db||[];FAV=s.fav||{}}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify({db:DB,fav:FAV}))}catch(e){}};
+const norm=h=>String(h||'').trim().toLowerCase().replace(/^#+/,'');
+const fmt=n=>n==null?'—':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function analyse(v){
+ if(!v.views)return{ok:false};
+ const days=Math.max(1,(Date.now()-new Date(v.date).getTime())/864e5);
+ const pop=Math.min(100,Math.log10(v.views+1)/7*100),vel=Math.min(100,Math.log10(v.views/days+1)/6*100);
+ const e=((v.likes||0)+(v.comments||0)*2+(v.shares||0)*3)/v.views,eng=Math.min(100,e/0.12*100);
+ return{ok:true,pop:Math.round(pop),vel:Math.round(vel),eng:Math.round(eng),er:e*100,score:Math.round(pop*.3+vel*.35+eng*.35)}}
+const label=s=>s>=90?'Desempenho excelente':s>=80?'Potencial muito alto':s>=70?'Potencial alto':s>=60?'Bom desempenho':s>=40?'Desempenho intermediário':'Desempenho baixo';
+function card(v){const a=v.a;return `<div class="card"><div class="th" style="background-image:url('${esc(v.thumb)}')">${a.ok?`<span class="sc">${a.score}%</span>`:''}</div><div class="cb"><b>${esc(v.profile)}</b><span class="st">YouTube Shorts · ${esc(v.title).slice(0,70)}</span>
+${a.ok?`<span style="color:var(--g)">${label(a.score)}</span>`:'<span style="color:var(--y)">Métricas não verificadas</span>'}
+<div class="m"><span>Views <b>${fmt(v.views)}</b></span><span>Curtidas <b>${fmt(v.likes)}</b></span><span>Comentários <b>${fmt(v.comments)}</b></span><span>Data <b>${esc(v.date)}</b></span>${a.ok?`<span>Engaj. <b>${a.er.toFixed(1)}%</b></span>`:''}</div>
+${a.ok?`<div class="st">Popularidade ${a.pop}% · Velocidade ${a.vel}% · Engajamento ${a.eng}%</div><div class="bar"><i style="width:${a.score}%"></i></div>`:''}
+<div class="tag">${v.hashtags.map(h=>'#'+esc(h)).join(' ')}</div>
+<div class="row" style="margin-top:auto"><a class="s" target="_blank" rel="noopener" href="${esc(v.url)}">Abrir</a><button class="s" data-c="${esc(v.url)}">Copiar link</button><button class="s" data-f="${esc(v.id)}">${FAV[v.id]?'★ Favorito':'☆ Favoritar'}</button></div></div></div>`}
+function sortL(l,m){const f={score:(a,b)=>(b.a.score||-1)-(a.a.score||-1),views:(a,b)=>(b.views||-1)-(a.views||-1),eng:(a,b)=>(b.a.eng||-1)-(a.a.eng||-1),new:(a,b)=>new Date(b.date)-new Date(a.date),old:(a,b)=>new Date(a.date)-new Date(b.date)}[m];return l.sort(f)}
+function render(){const l=sortL(LIST.map(v=>({...v,a:analyse(v)})),$('so').value);const an=l.filter(v=>v.a.ok).length;
+ $('sum').innerHTML=cur?`#${esc(cur)}: ${l.length} vídeo(s) com essa hashtag · ${an} analisado(s) · ${l.length-an} sem métricas verificadas.`:'';$('res').innerHTML=l.map(card).join('')}
+function render2(){const hs=[...new Set(DB.flatMap(v=>v.hashtags))],s=$('f2h'),c=s.value;s.innerHTML='<option value="">Todas as hashtags</option>'+hs.map(h=>`<option value="${esc(h)}">#${esc(h)}</option>`).join('');s.value=c;
+ let l=DB.slice();if($('f2m').value=='fav')l=l.filter(v=>FAV[v.id]);if(s.value)l=l.filter(v=>v.hashtags.includes(s.value));
+ $('res2').innerHTML=l.length?sortL(l.map(v=>({...v,a:analyse(v)})),'score').map(card).join(''):'<p class="st">Nada por aqui ainda.</p>'}
+$('go').onclick=async()=>{const h=norm($('h').value);if(!h)return;cur=h;$('sum').textContent='Garimpando…';$('res').innerHTML='';$('go').disabled=true;
+ try{const r=await fetch('/api/garimpar?tag='+encodeURIComponent(h)+'&order='+$('mode').value),j=await r.json();if(!j.ok)throw new Error(j.error);
+  LIST=j.videos;j.videos.forEach(v=>{if(!DB.find(x=>x.id===v.id))DB.push(v);else Object.assign(DB.find(x=>x.id===v.id),v)});save();render()}
+ catch(e){$('sum').innerHTML='<span class="err">Erro: '+esc(e.message)+'</span>'}$('go').disabled=false};
+$('h').onkeydown=e=>{if(e.key=='Enter')$('go').click()};$('so').onchange=render;['f2m','f2h'].forEach(i=>$(i).onchange=render2);
+document.addEventListener('click',e=>{const t=e.target;
+ if(t.dataset.c)navigator.clipboard?.writeText(t.dataset.c).then(()=>t.textContent='Copiado!');
+ if(t.dataset.f){const id=t.dataset.f;FAV[id]?delete FAV[id]:FAV[id]=1;save();render();render2()}});
+function show(n){[1,2].forEach(i=>{$('p'+i).classList.toggle('hide',i!=n);$('t'+i).classList.toggle('on',i==n)});if(n==2)render2()}
+$('t1').onclick=()=>show(1);$('t2').onclick=()=>show(2);
+</script></body></html>
